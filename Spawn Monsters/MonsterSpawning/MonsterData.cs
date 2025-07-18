@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿// MonsterData.cs
+using Microsoft.Xna.Framework;
 using StardewValley.Monsters;
 using System;
 using System.Collections.Generic;
@@ -63,7 +64,13 @@ namespace Spawn_Monsters.Monsters
             TigerSlime,
             MagmaDuggy,
             PrismaticSlime,
-            IridiumGolem
+            IridiumGolem,
+            // 🆕 NEW MONSTERS ADDED
+            BigBlueSlime,
+            BigRedSlime,
+            BigPurpleSlime,
+            RockGolem,
+            ShadowSniper
         }
 
         static MonsterData() {
@@ -317,12 +324,21 @@ namespace Spawn_Monsters.Monsters
                 .WithSecondConstructorArg(5)
                 .Build());
 
-            // Iridium Golem Constructor checks RNG and farm type, probably needs custom recreation
-            // data.Add(Monster.IridiumGolem, golemBuilder
-            //    .WithDisplayname("Iridium Golem")
-            //    .WithTextureName("Iridium Golem")
-            //    .WithSecondConstructorArg(10)
-            //    .Build());
+            // 🆕 UNCOMMENTED - Iridium Golem now enabled
+            data.Add(Monster.IridiumGolem, new Builder()
+                .WithMonsterType(typeof(RockGolem))
+                .WithDisplayname("Iridium Golem")
+                .WithTextureName("Iridium Golem")
+                .WithSecondConstructorArg(10)
+                .Build());
+
+            // 🆕 NEW - Rock Golem
+            data.Add(Monster.RockGolem, new Builder()
+                .WithMonsterType(typeof(RockGolem))
+                .WithDisplayname("Rock Golem")
+                .WithTextureName("Rock Golem")
+                .WithSecondConstructorArg(0)
+                .Build());
 
             data.Add(Monster.PepperRex, new Builder()
                 .WithMonsterType(typeof(DinoMonster))
@@ -340,6 +356,37 @@ namespace Spawn_Monsters.Monsters
                 .WithTextureWidth(32)
                 .WithTextureHeight(32)
                 .WithTextureColor(Color.Lime)
+                .Build());
+
+            // 🆕 NEW - Big Slime Color Variants
+            data.Add(Monster.BigBlueSlime, new Builder()
+                .WithMonsterType(typeof(BigSlime))
+                .WithDisplayname("Big Blue Slime")
+                .WithTextureName("Big Slime")
+                .WithSecondConstructorArg(40)
+                .WithTextureWidth(32)
+                .WithTextureHeight(32)
+                .WithTextureColor(Color.Blue)
+                .Build());
+
+            data.Add(Monster.BigRedSlime, new Builder()
+                .WithMonsterType(typeof(BigSlime))
+                .WithDisplayname("Big Red Slime")
+                .WithTextureName("Big Slime")
+                .WithSecondConstructorArg(80)
+                .WithTextureWidth(32)
+                .WithTextureHeight(32)
+                .WithTextureColor(Color.Red)
+                .Build());
+
+            data.Add(Monster.BigPurpleSlime, new Builder()
+                .WithMonsterType(typeof(BigSlime))
+                .WithDisplayname("Big Purple Slime")
+                .WithTextureName("Big Slime")
+                .WithSecondConstructorArg(121)
+                .WithTextureWidth(32)
+                .WithTextureHeight(32)
+                .WithTextureColor(Color.Purple)
                 .Build());
 
             var serpentBuilder = new Builder()
@@ -431,7 +478,17 @@ namespace Spawn_Monsters.Monsters
                 .WithSecondConstructorArg(0)
                 .Build());
 
+            // 🔄 RENAMED - Changed Shooter to be more clear about naming
             data.Add(Monster.Shooter, new Builder()
+                .WithMonsterType(typeof(Shooter))
+                .WithDisplayname("Shooter")
+                .WithTextureName("Shadow Sniper")
+                .WithTextureWidth(32)
+                .WithTextureHeight(32)
+                .Build());
+
+            // 🆕 NEW - Shadow Sniper (separate from Shooter)
+            data.Add(Monster.ShadowSniper, new Builder()
                 .WithMonsterType(typeof(Shooter))
                 .WithDisplayname("Shadow Sniper")
                 .WithTextureName("Shadow Sniper")

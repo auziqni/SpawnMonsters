@@ -17,7 +17,13 @@ namespace Spawn_Monsters.Monsters
                     "Black Slime",
                     "Gray Sludge",
                     "Big Slime",
-                    "Prismatic Slime"
+                    "Prismatic Slime",
+                    // 🆕 NEW BIG SLIME VARIANTS  
+                    "Big Blue Slime",
+                    "Big Red Slime",
+                    "Big Purple Slime",
+                    // 🆕 NEW SLIME TYPES
+                    "Tiger Slime"
                 }},
                 {"Bats",
                 new string[] {
@@ -48,12 +54,17 @@ namespace Spawn_Monsters.Monsters
                 new string[] {
                     "Rock Crab",
                     "Lava Crab",
-                    "Iridium Crab"
+                    "Iridium Crab",
+                    // 🆕 NEW CRAB-LIKE
+                    "False Magma Cap"
                 }},
                 {"Golems",
                 new string[] {
                     "Stone Golem",
-                    "Wilderness Golem"
+                    "Wilderness Golem",
+                    // 🆕 NEW GOLEMS
+                    "Rock Golem",
+                    "Iridium Golem"
                 }},
                 {"Serpents",
                 new string[] {
@@ -64,6 +75,8 @@ namespace Spawn_Monsters.Monsters
                 new string[] {
                     "Shadow Brute",
                     "Shadow Shaman",
+                    // 🆕 NEW SHADOW VARIANT
+                    "Shadow Sniper"
                 }},
                 {"Magma Sprites",
                 new string[] {
@@ -93,7 +106,9 @@ namespace Spawn_Monsters.Monsters
                     "Mummy",
                     "Pepper Rex",
                     "Shooter",
-                    "Spider"
+                    "Spider",
+                    // 🆕 NEW SPIDER-LIKE
+                    "Spiker"
                 }}
             };
 

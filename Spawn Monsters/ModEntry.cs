@@ -48,8 +48,49 @@ namespace Spawn_Monsters
                 return;
             }
 
+            // 🆕 NEW: Custom hotkey for Stone Golem spawning
+            if (e.Button == SButton.G) {
+                SpawnStoneGolemAtOffset();
+                return;
+            }
+
             if (e.Button == config.MenuKey) {
                 Game1.activeClickableMenu = new MonsterMenu.MonsterMenu(Helper);
+            }
+        }
+
+        /*********
+        ** 🆕 NEW: Custom Spawn Method
+        *********/
+        private void SpawnStoneGolemAtOffset() {
+            if (!Context.IsWorldReady) {
+                Monitor.Log("Load a save first!", LogLevel.Info);
+                return;
+            }
+
+            try {
+                // Get farmer position (using correct property)
+                Vector2 farmerPos = Game1.player.Tile;  // Changed from getTileLocation()
+                
+                // Calculate spawn position (+5X, +5Y)
+                Vector2 spawnPos = new Vector2(farmerPos.X + 5, farmerPos.Y + 5);
+                
+                // Convert to pixel coordinates for non-tile monsters
+                Vector2 pixelPos = new Vector2(spawnPos.X * Game1.tileSize, spawnPos.Y * Game1.tileSize);
+                
+                // Spawn Stone Golem
+                bool success = Spawner.GetInstance().SpawnMonster(MonsterData.Monster.StoneGolem, pixelPos);
+                
+                if (success) {
+                    Monitor.Log($"Stone Golem spawned at ({spawnPos.X}, {spawnPos.Y})", LogLevel.Info);
+                    Game1.addHUDMessage(new HUDMessage($"Stone Golem spawned!", HUDMessage.newQuest_type));
+                } else {
+                    Monitor.Log("Could not spawn Stone Golem at that location", LogLevel.Warn);
+                    Game1.addHUDMessage(new HUDMessage("Cannot spawn there!", HUDMessage.error_type));
+                }
+            }
+            catch (Exception ex) {
+                Monitor.Log($"Error spawning Stone Golem: {ex.Message}", LogLevel.Error);
             }
         }
 
@@ -64,7 +105,8 @@ namespace Spawn_Monsters
                     $"\n\nUses Farmer's coordinates if none or '{config.FarmerPositionCharacter}' was given." +
                     $"\n\nExample: monster_spawn \"Green Slime\" 32 23 4" +
                     $"\nspawns four Green Slimes at coordinates 32|23" +
-                    $"\nuse monster_list for a list of available monster names.", LogLevel.Info);
+                    $"\nuse monster_list for a list of available monster names." +
+                    $"\n\n🆕 NEW: Press 'G' to quickly spawn Stone Golem at +5X +5Y from your position!", LogLevel.Info);
                 return;
             }
 
@@ -125,7 +167,10 @@ namespace Spawn_Monsters
                 "Monsters available to spawn:\n\n" +
                 monsterList.ToString() +
                 "\n\nUse these names with 'monster_spawn'.\n" +
-                "Keep in mind that some monsters don't work properly outside of the farm and the mines!\n"
+                "Keep in mind that some monsters don't work properly outside of the farm and the mines!\n" +
+                "\n🆕 HOTKEYS:\n" +
+                "Press 'P' - Open monster menu\n" +
+                "Press 'G' - Quick spawn Stone Golem (+5X +5Y from player)\n"
             , LogLevel.Info);
         }
 

@@ -1,10 +1,10 @@
 {
   "Name": "Spawn Monsters",
-  "Author": "Berisan",
-  "Version": "3.3.3",
+  "Author": "Auziqni",
+  "Version": "4.0.0",
   "Description": "Spawn any monster you want, anywhere you want!",
-  "UniqueID": "Berisan.SpawnMonsters",
+  "UniqueID": "Auziqni.SpawnMonsters",
   "EntryDll": "Spawn Monsters.dll",
   "MinimumApiVersion": "4.0",
-  "UpdateKeys": [ "Nexus:3201" ]
+  "UpdateKeys": ["Nexus:3201"]
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿// Spawner.cs
+using Microsoft.Xna.Framework;
 using Spawn_Monsters.Monsters;
 using StardewModdingAPI;
 using StardewValley;
@@ -45,6 +46,15 @@ namespace Spawn_Monsters.MonsterSpawning
                 }
                 return false;
             }
+            // 🆕 ADD: Special placement validation for new golems
+            else if (monster == MonsterData.Monster.RockGolem || monster == MonsterData.Monster.IridiumGolem) {
+                // Rock golems prefer solid ground - avoid water tiles
+                if (Game1.currentLocation.map.GetLayer("Back").Tiles[(int)tile.X, (int)tile.Y] != null) {
+                    int tileIndex = Game1.currentLocation.map.GetLayer("Back").Tiles[(int)tile.X, (int)tile.Y].TileIndex;
+                    // Avoid water tiles (common water tile indices)
+                    if (tileIndex >= 76 && tileIndex <= 79) return false;
+                }
+            }
             return true;
         }
 
@@ -66,6 +76,7 @@ namespace Spawn_Monsters.MonsterSpawning
                 Monster m = (Monster) Activator.CreateInstance(monsterData.Type, args.ToArray());
                 m.currentLocation = Game1.currentLocation;
 
+                // 🔧 ENHANCED: Existing special handling
                 if (monster == MonsterData.Monster.GraySlime) {
                     int num = Game1.random.Next(120, 200);
                     (m as GreenSlime).color.Value = new Color(num, num, num);
@@ -81,6 +92,53 @@ namespace Spawn_Monsters.MonsterSpawning
                     (m as GreenSlime).makeTigerSlime();
                 } else if (monster == MonsterData.Monster.PrismaticSlime) {
                     (m as GreenSlime).makePrismatic();
+                }
+                // 🆕 NEW: Special handling for new Big Slime variants
+                else if (monster == MonsterData.Monster.BigBlueSlime) {
+                    // BigSlime doesn't have color property, use constructor args instead
+                    m.Health = m.MaxHealth = 280; // Slightly stronger than regular big slime
+                }
+                else if (monster == MonsterData.Monster.BigRedSlime) {
+                    m.Health = m.MaxHealth = 320; // Red slimes are typically stronger
+                    m.DamageToFarmer = 12; // Increased damage
+                }
+                else if (monster == MonsterData.Monster.BigPurpleSlime) {
+                    m.Health = m.MaxHealth = 360; // Purple slimes are high-tier
+                    m.DamageToFarmer = 15; // High damage
+                    // Purple slimes sometimes drop rare items
+                    if (random.NextDouble() < 0.1) {
+                        m.objectsToDrop.Add("(O)768"); // Solar Essence
+                    }
+                }
+                // 🆕 NEW: Special handling for Rock Golem
+                else if (monster == MonsterData.Monster.RockGolem) {
+                    m.Health = m.MaxHealth = 200; // Sturdy but not overpowered
+                    m.DamageToFarmer = 10;
+                    // Rock golems drop stone and ore
+                    m.objectsToDrop.Add("(O)390"); // Stone
+                    if (random.NextDouble() < 0.3) {
+                        m.objectsToDrop.Add("(O)378"); // Copper Ore
+                    }
+                }
+                // 🆕 NEW: Special handling for Iridium Golem  
+                else if (monster == MonsterData.Monster.IridiumGolem) {
+                    m.Health = m.MaxHealth = 500; // Very tough
+                    m.DamageToFarmer = 20; // High damage
+                    // Iridium golems drop valuable items
+                    m.objectsToDrop.Add("(O)337"); // Iridium Ore
+                    if (random.NextDouble() < 0.2) {
+                        m.objectsToDrop.Add("(O)386"); // Iridium Bar
+                    }
+                }
+                // 🆕 NEW: Special handling for Shadow Sniper
+                else if (monster == MonsterData.Monster.ShadowSniper) {
+                    m.Health = m.MaxHealth = 150; // Glass cannon
+                    m.DamageToFarmer = 18; // High ranged damage
+                    m.Speed = 3; // Fast movement
+                    // Shadow creatures drop void essence
+                    if (random.NextDouble() < 0.4) {
+                        m.objectsToDrop.Add("(O)769"); // Void Essence
+                    }
                 }
 
                 Game1.currentLocation.addCharacter(m);
