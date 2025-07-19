@@ -1,7 +1,9 @@
-﻿using Microsoft.Xna.Framework;
+﻿// ModEntry.cs - MODIFIED FILE
+using Microsoft.Xna.Framework;
 using Spawn_Monsters.Monsters;
 using Spawn_Monsters.MonsterSpawning;
 using Spawn_Monsters.Api;
+using Spawn_Monsters.BuffSystem;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
@@ -31,7 +33,7 @@ namespace Spawn_Monsters
             helper.ConsoleCommands.Add("farmer_position", "Prints the Farmer's current position", FarmerPosition);
             helper.ConsoleCommands.Add("remove_prismatic_jelly", "Removes all Prismatic Jelly from your inventory", DeleteJelly);
             
-            // 🆕 NEW: API Commands
+            // API Commands
             helper.ConsoleCommands.Add("api_start", "Start the HTTP API server", StartApiServer);
             helper.ConsoleCommands.Add("api_stop", "Stop the HTTP API server", StopApiServer);
             helper.ConsoleCommands.Add("api_status", "Show API server status", ShowApiStatus);
@@ -40,8 +42,11 @@ namespace Spawn_Monsters
 
             Spawner.GetInstance().RegisterMonitor(Monitor);
 
-            // 🆕 NEW: Initialize Custom Monster Manager
+            // Initialize Custom Monster Manager
             CustomMonsterManager.Initialize(helper, Monitor);
+            
+            // Initialize Buff Manager
+            BuffManager.Initialize(helper, Monitor);
 
             helper.Events.Input.ButtonPressed += OnButtonPressed;
             helper.Events.GameLoop.Saving += OnSaveCreating;
@@ -64,6 +69,7 @@ namespace Spawn_Monsters
         public void OnSaveCreating(object sender, SavingEventArgs e) {
             Spawner.GetInstance().KillEverything();
             CustomMonsterManager.ClearAllNames();
+            BuffManager.ClearBuff();
         }
 
         /*********
@@ -74,9 +80,15 @@ namespace Spawn_Monsters
                 return;
             }
 
-            // 🆕 NEW: Custom hotkey for Stone Golem spawning
+            // Custom hotkey for Stone Golem spawning
             if (e.Button == SButton.G) {
                 SpawnStoneGolemAtOffset();
+                return;
+            }
+
+            // J hotkey for shield buff
+            if (e.Button == SButton.J) {
+                BuffManager.ApplyQuickShield();
                 return;
             }
 
@@ -86,7 +98,7 @@ namespace Spawn_Monsters
         }
 
         /*********
-        ** 🆕 NEW: Custom Spawn Method
+        ** Custom Spawn Method
         *********/
         private void SpawnStoneGolemAtOffset() {
             if (!Context.IsWorldReady) {
@@ -121,7 +133,7 @@ namespace Spawn_Monsters
         }
 
         /*********
-        ** 🆕 NEW: API Server Methods
+        ** API Server Methods
         *********/
         private void StartHttpApiServer()
         {
@@ -134,13 +146,15 @@ namespace Spawn_Monsters
                 }
 
                 apiServer = new HttpApiServer(Monitor, 8080);
-                apiServer.Start();  // Changed from StartAsync() to Start()
+                apiServer.Start();
                 
                 Monitor.Log("🚀 HTTP API Server starting...", LogLevel.Info);
-                Monitor.Log("📡 API Endpoint: http://localhost:8080/api/spawn", LogLevel.Info);
-                Monitor.Log("📋 Example Postman request:", LogLevel.Info);
+                Monitor.Log("📡 API Endpoints:", LogLevel.Info);
                 Monitor.Log("   POST http://localhost:8080/api/spawn", LogLevel.Info);
-                Monitor.Log("   {\"Monster Name\":\"Stone Golem\",\"Qty\":3,\"Custom Name\":\"Guardian\"}", LogLevel.Info);
+                Monitor.Log("   POST http://localhost:8080/api/effects", LogLevel.Info);
+                Monitor.Log("📋 Example requests:", LogLevel.Info);
+                Monitor.Log("   Spawn: {\"Monster Name\":\"Stone Golem\",\"Qty\":3,\"Custom Name\":\"Guardian\"}", LogLevel.Info);
+                Monitor.Log("   Buff: {\"effect\":\"shield\",\"Custom Name\":\"Boss Buff\",\"duration\":3000,\"value\":75}", LogLevel.Info);
             }
             catch (Exception ex)
             {
@@ -175,7 +189,9 @@ namespace Spawn_Monsters
                     $"\n\nExample: monster_spawn \"Green Slime\" 32 23 4" +
                     $"\nspawns four Green Slimes at coordinates 32|23" +
                     $"\nuse monster_list for a list of available monster names." +
-                    $"\n\n🆕 NEW: Press 'G' to quickly spawn Stone Golem at +5X +5Y from your position!" +
+                    $"\n\n🆕 NEW HOTKEYS:" +
+                    $"\nPress 'G' to quickly spawn Stone Golem at +5X +5Y from your position!" +
+                    $"\nPress 'J' to apply Shield Buff (50% protection for 5 seconds)!" +
                     $"\n🌐 API: Use HTTP API for external triggers (api_status for details)", LogLevel.Info);
                 return;
             }
@@ -240,8 +256,10 @@ namespace Spawn_Monsters
                 "\n🆕 HOTKEYS:\n" +
                 "Press 'P' - Open monster menu\n" +
                 "Press 'G' - Quick spawn Stone Golem (+5X +5Y from player)\n" +
+                "Press 'J' - Apply Shield Buff (50% protection for 5 seconds)\n" +
                 "\n🌐 HTTP API:\n" +
                 "POST http://localhost:8080/api/spawn - Spawn with custom names\n" +
+                "POST http://localhost:8080/api/effects - Apply buff effects\n" +
                 "Use 'api_status' command for more details\n"
             , LogLevel.Info);
         }
@@ -270,7 +288,7 @@ namespace Spawn_Monsters
             Monitor.Log($"Removed {amount} Prismatic {(amount == 1 ? "Jelly" : "Jellies")} from your inventory.", LogLevel.Info);
         }
 
-        // 🆕 NEW: API Commands
+        // API Commands
         public void StartApiServer(string command, string[] args)
         {
             StartHttpApiServer();
@@ -285,21 +303,23 @@ namespace Spawn_Monsters
         {
             bool isRunning = apiServer != null;
             int activeNames = CustomMonsterManager.GetActiveNameCount();
+            bool hasActiveBuff = BuffManager.HasActiveBuff();
+            var currentBuff = BuffManager.GetCurrentBuff();
 
             Monitor.Log($"🌐 HTTP API Server Status: {(isRunning ? "RUNNING" : "STOPPED")}", LogLevel.Info);
             
             if (isRunning)
             {
-                Monitor.Log("📡 Endpoint: http://localhost:8080/api/spawn", LogLevel.Info);
-                Monitor.Log("📋 POST Request Format:", LogLevel.Info);
-                Monitor.Log("   Content-Type: application/json", LogLevel.Info);
-                Monitor.Log("   Body: {", LogLevel.Info);
-                Monitor.Log("     \"Monster Name\": \"Stone Golem\",", LogLevel.Info);
-                Monitor.Log("     \"Qty\": 3,", LogLevel.Info);
-                Monitor.Log("     \"Custom Name\": \"Guardian\"", LogLevel.Info);
-                Monitor.Log("   }", LogLevel.Info);
+                Monitor.Log("📡 Endpoints:", LogLevel.Info);
+                Monitor.Log("   POST http://localhost:8080/api/spawn", LogLevel.Info);
+                Monitor.Log("   POST http://localhost:8080/api/effects", LogLevel.Info);
+                Monitor.Log("📋 POST Request Formats:", LogLevel.Info);
+                Monitor.Log("   Spawn: {\"Monster Name\":\"Stone Golem\",\"Qty\":3,\"Custom Name\":\"Guardian\"}", LogLevel.Info);
+                Monitor.Log("   Buff: {\"effect\":\"shield\",\"Custom Name\":\"Boss Buff\",\"duration\":3000,\"value\":75}", LogLevel.Info);
                 Monitor.Log($"👁️ Active custom names: {activeNames}", LogLevel.Info);
+                Monitor.Log($"⚡ Active buff: {(hasActiveBuff ? $"{currentBuff.Type} ({currentBuff.Value}%) from {currentBuff.CustomName}" : "None")}", LogLevel.Info);
                 Monitor.Log("🔧 Commands: api_start, api_stop, api_status", LogLevel.Info);
+                Monitor.Log("🎮 Hotkeys: P (menu), G (golem), J (shield)", LogLevel.Info);
             }
             else
             {

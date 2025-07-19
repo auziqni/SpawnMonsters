@@ -1,4 +1,4 @@
-// HttpApiServer.cs
+// HttpApiServer.cs - MODIFIED FILE
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +11,7 @@ using StardewModdingAPI;
 using StardewValley;
 using Spawn_Monsters.Monsters;
 using Spawn_Monsters.MonsterSpawning;
+using Spawn_Monsters.BuffSystem;
 
 namespace Spawn_Monsters.Api
 {
@@ -39,6 +40,7 @@ namespace Spawn_Monsters.Api
                 monitor.Log($"🌐 HTTP API Server started on http://localhost:{port}/", LogLevel.Info);
                 monitor.Log("📡 Available endpoints:", LogLevel.Info);
                 monitor.Log("   POST /api/spawn - Spawn monsters with custom names", LogLevel.Info);
+                monitor.Log("   POST /api/effects - Apply buff effects", LogLevel.Info);
 
                 // Start listening for requests
                 _ = Task.Run(HandleRequestsAsync);
@@ -92,6 +94,10 @@ namespace Spawn_Monsters.Api
                 if (path == "/api/spawn" && method == "POST")
                 {
                     await HandleSpawnRequest(request, response);
+                }
+                else if (path == "/api/effects" && method == "POST")
+                {
+                    await HandleEffectsRequest(request, response);
                 }
                 else if (path == "/" || path == "/api")
                 {
@@ -174,6 +180,72 @@ namespace Spawn_Monsters.Api
             }
         }
 
+        private async Task HandleEffectsRequest(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            try
+            {
+                // Read request body
+                string requestBody;
+                using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                {
+                    requestBody = await reader.ReadToEndAsync();
+                }
+
+                // Parse JSON
+                var effectRequest = JsonConvert.DeserializeObject<EffectRequest>(requestBody);
+
+                // Validate request
+                if (string.IsNullOrEmpty(effectRequest?.Effect))
+                {
+                    await SendJsonResponse(response, new { error = "Effect type is required" }, 400);
+                    return;
+                }
+
+                if (effectRequest.Effect != "shield" && effectRequest.Effect != "damage")
+                {
+                    await SendJsonResponse(response, new { error = "Effect must be 'shield' or 'damage'" }, 400);
+                    return;
+                }
+
+                // Apply defaults
+                effectRequest.CustomName = string.IsNullOrEmpty(effectRequest.CustomName) ? "API" : effectRequest.CustomName;
+                effectRequest.Duration = effectRequest.Duration <= 0 ? 5000 : effectRequest.Duration; // Default 5 seconds
+                effectRequest.Value = effectRequest.Value <= 0 ? 50 : effectRequest.Value; // Default 50%
+
+                // Check if game is ready
+                if (!Context.IsWorldReady)
+                {
+                    await SendJsonResponse(response, new { error = "Game world is not ready" }, 400);
+                    return;
+                }
+
+                // Apply buff effect
+                var buffType = effectRequest.Effect == "shield" ? BuffType.Shield : BuffType.Damage;
+                BuffManager.ApplyBuff(buffType, effectRequest.CustomName, effectRequest.Duration, effectRequest.Value);
+
+                monitor.Log($"✅ API Effect: {effectRequest.Effect} {effectRequest.Value}% for {effectRequest.Duration}ms from '{effectRequest.CustomName}'", LogLevel.Info);
+                
+                await SendJsonResponse(response, new 
+                { 
+                    success = true, 
+                    message = $"Applied {effectRequest.Effect} buff",
+                    effect = effectRequest.Effect,
+                    customName = effectRequest.CustomName,
+                    duration = effectRequest.Duration,
+                    value = effectRequest.Value
+                });
+            }
+            catch (JsonException)
+            {
+                await SendJsonResponse(response, new { error = "Invalid JSON format" }, 400);
+            }
+            catch (Exception ex)
+            {
+                monitor.Log($"❌ Effects request error: {ex.Message}", LogLevel.Error);
+                await SendJsonResponse(response, new { error = "Failed to apply effect" }, 500);
+            }
+        }
+
         private async Task HandleInfoRequest(HttpListenerResponse response)
         {
             var info = new
@@ -199,6 +271,26 @@ namespace Spawn_Monsters.Api
                             MonsterName = "Stone Golem",
                             Qty = 3,
                             CustomName = "Guardian"
+                        }
+                    },
+                    effects = new
+                    {
+                        method = "POST",
+                        url = "/api/effects",
+                        description = "Apply buff effects to player",
+                        parameters = new
+                        {
+                            effect = "string (required) - 'shield' or 'damage'",
+                            CustomName = "string (optional) - Source identifier (default: 'API')",
+                            duration = "number (optional) - Duration in milliseconds (default: 5000)",
+                            value = "number (optional) - Percentage value (default: 50)"
+                        },
+                        example = new
+                        {
+                            effect = "damage",
+                            CustomName = "Boss Buff",
+                            duration = 3000,
+                            value = 50
                         }
                     }
                 }
@@ -357,6 +449,21 @@ namespace Spawn_Monsters.Api
 
         [JsonProperty("Custom Name")]
         public string CustomName { get; set; }
+    }
+
+    public class EffectRequest
+    {
+        [JsonProperty("effect")]
+        public string Effect { get; set; }
+
+        [JsonProperty("Custom Name")]
+        public string CustomName { get; set; }
+
+        [JsonProperty("duration")]
+        public int Duration { get; set; } = 5000;
+
+        [JsonProperty("value")]
+        public float Value { get; set; } = 50;
     }
 
     public class SpawnResult
